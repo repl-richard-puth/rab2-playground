@@ -4,6 +4,7 @@ import time
 import boto3
 import requests
 import re
+import csv
 
 # Setup structured logging
 logger = logging.getLogger()
@@ -67,6 +68,24 @@ def extract_jira_key(text):
     match = re.search(r'\b[\w]+-\d+\b', text, re.IGNORECASE)
     return match.group(0).upper() if match else None
 
+def load_prompt_templates_from_s3(bucket="rab20-prompts", key="Risk Assessment Bot Prompts.csv ")
+    prompt_map = {}
+    try:
+        s3 = boto3.client('s3')
+        response = s3.get_object(Bucket=bucket, Key=key)
+        content = response['Body'].read().decode('utf-8-sig').splitlines()
+
+        reader = csv.DictReader(content)
+        for row in header:
+            repo = row['Repo'].strip()
+            prompt = row['Prompt'].strip()
+            prompt_map[repo] = prompt
+
+        return prompt_map
+    except Exception as e:
+        logger.warning(f"⚠️ Failed to load prompt templates from S3: {e}")
+        return {}
+
 def lambda_handler(event, context):
     start_time = time.time()  # Start execution timer
     request_id = context.aws_request_id if context else "UNKNOWN"
@@ -119,6 +138,11 @@ def lambda_handler(event, context):
                 logger.warning(f"⚠️ Could not retrieve JIRA ticket: {str(je)}")
         else:
             logger.info("❌ No JIRA key found in PR title.")
+
+        prompt_templates = load_prompt_templates_from_s3()
+        repo_name = body.get('repository', {}).get("name","")
+        repo_prompt = prompt_templates.get(repo_name, "Default Risk Assessment Prompt")
+        logger.info(f"✍️ Loaded Prompt for {repo_name}: {repo_prompt}")
 
         execution_time = time.time() - start_time
         logger.info(f"⏱ Execution Time: {execution_time:.3f} seconds")
