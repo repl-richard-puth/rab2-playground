@@ -68,7 +68,7 @@ def extract_jira_key(text):
     match = re.search(r'\b[\w]+-\d+\b', text, re.IGNORECASE)
     return match.group(0).upper() if match else None
 
-def load_prompt_templates_from_s3(bucket="rab20-prompts", key="Risk Assessment Bot Prompts.csv ")
+def load_prompt_templates_from_s3(bucket="rab20-prompts", key="Risk Assessment Bot Prompts.csv "):
     prompt_map = {}
     try:
         s3 = boto3.client('s3')
