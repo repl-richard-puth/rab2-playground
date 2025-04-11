@@ -76,12 +76,27 @@ def load_prompt_templates_from_s3(bucket="rab20-prompts", key="Risk Assessment B
         content = response['Body'].read().decode('utf-8-sig').splitlines()
 
         reader = csv.DictReader(content)
+        reader.fieldnames = [f.strip() for f in reader.fieldnames]  # Clean headers
+
         for row in reader:
-            repo = row['Repo'].strip()
-            prompt = row['Prompt'].strip()
-            prompt_map[repo] = prompt
+            repo_raw = row.get('Repo')
+            prompt_raw = row.get('Prompt')
+
+            if repo_raw is None or prompt_raw is None:
+                logger.warning(f"⚠️ Skipping invalid row: {row}")
+                continue
+
+            repo = repo_raw.strip()
+            prompt = prompt_raw.strip()
+
+            if repo and prompt:
+                prompt_map[repo] = prompt
+            else:
+                logger.warning(f"⚠️ Skipping row with empty fields: {row}")
+
         logger.info(f"✅ Prompt templates loaded from S3: {prompt_map}")
         return prompt_map
+
     except Exception as e:
         logger.warning(f"⚠️ Failed to load prompt templates from S3: {e}")
         return {}

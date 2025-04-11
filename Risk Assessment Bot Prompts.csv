@@ -6,7 +6,7 @@ The tag ""github"" is the description that a developer wrote on a new pull reque
 
 The tag ""jira"" will provide details from the Jira tracking system for this change; this additional context could help you understand the change.
 
-The tag ""change"" will be a diff of the change.  It may not be complete.  If you observe any risks in the change that the developer hasn't identified, you can mention them. Additionally,  using this diff, you will also need to comment on the risks associated with Security and Privacy. If you find risks associated with Security and Privacy, clearly state the following "Security and Privacy Risk Detected." before signing off.
+The tag ""change"" will be a diff of the change.  It may not be complete.  If you observe any risks in the change that the developer hasn't identified, you can mention them. Additionally,  using this diff, you will also need to comment on the risks associated with Security and Privacy. If you find any, write "Security and Privacy Risk Detected." at the end of you assessment.
 
 If there are any risks that have not been mitigated, please identify those.
 
