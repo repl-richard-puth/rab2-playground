@@ -135,6 +135,27 @@ def call_claude(prompt: str, model_id="anthropic.claude-3-opus-20240229-v1:0"):
     except Exception as e:
         logger.error(f"❌ Claude invocation failed: {str(e)}", exc_info=True)
         return "⚠️ Error running Claude model"
+    
+def post_github_comment(owner, repo, pr_number, comment_body):
+    token = get_github_token()
+    url = f"https://api.github.com/repos/{owner}/{repo}/issues/{pr_number}/comments"
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json"
+    }
+
+    payload = {
+        "body": comment_body
+    }
+
+    logger.info(f"💬 Posting comment to {owner}/{repo} PR #{pr_number}")
+    response = requests.post(url, headers=headers, json=payload)
+
+    if response.status_code != 201:
+        raise Exception(f"Failed to post GitHub comment: {response.status_code} - {response.text}")
+
+    logger.info("✅ Comment posted successfully.")
 
 def lambda_handler(event, context):
     start_time = time.time()  # Start execution timer
@@ -217,6 +238,13 @@ def lambda_handler(event, context):
         # Ask claude
         risk_assessment = call_claude(final_prompt)
         logger.info(f"📝 Risk Assessment Summary:\n{risk_assessment[:1000]}")
+
+        # Extract owner and repo name
+        repo_info = body.get("repository", {}).get("full_name", "unknown/unknown")
+        owner, repo = repo_info.split("/")
+
+        # Post the comment
+        post_github_comment(owner, repo, pr_number, risk_assessment)
 
         execution_time = time.time() - start_time
         logger.info(f"⏱ Execution Time: {execution_time:.3f} seconds")
