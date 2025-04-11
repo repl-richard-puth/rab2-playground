@@ -85,6 +85,25 @@ def load_prompt_templates_from_s3(bucket="rab20-prompts", key="Risk Assessment B
     except Exception as e:
         logger.warning(f"⚠️ Failed to load prompt templates from S3: {e}")
         return {}
+    
+def build_final_prompt(template: str, context: dict) -> str:
+    # Replaces Prompt template variables in the prompt with actual context values.
+    logger.info("🧩 Starting prompt construction...")
+    placeholders = {
+        "${githubTitle}": context.get("githubTitle", ""),
+        "${githubDescription}": context.get("githubDescription", ""),
+        "${jiraTitle}": context.get("jiraTitle", ""),
+        "${jiraDescription}": context.get("jiraDescription", ""),
+        "${branchDiff}": context.get("branchDiff", "")
+    }
+
+    for key, value in placeholders.items():
+        value_preview = (value[:200] + '...') if len(value) > 200 else value
+        logger.info(f"🔄 Replacing {key} with: {value_preview}")
+        template = template.replace(key, value)
+
+    logger.info(f"✅ Final prompt length: {len(template)} characters")
+    return template
 
 def lambda_handler(event, context):
     start_time = time.time()  # Start execution timer
@@ -144,6 +163,19 @@ def lambda_handler(event, context):
         repo_name = body.get('repository', {}).get("name","")
         repo_prompt = prompt_templates.get(repo_name, "Default Risk Assessment Prompt")
         logger.info(f"✍️ Loaded Prompt for {repo_name}: {repo_prompt}")
+
+        # Build Prompt
+        context = {
+            "githubTitle": pr_data.get("title", ""),
+            "githubDescription": pr_data.get("body", ""),
+            "jiraTitle": jira_data.get("summary", ""),
+            "jiraDescription": jira_data.get("description", ""),
+            "branchDiff": diff
+        }
+
+        # Load prompt template for repo
+        final_prompt = build_final_prompt(repo_prompt, context)
+        logger.info(f"🧠 Final prompt constructed ({len(final_prompt)} characters)")
 
         execution_time = time.time() - start_time
         logger.info(f"⏱ Execution Time: {execution_time:.3f} seconds")
