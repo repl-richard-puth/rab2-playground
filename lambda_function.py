@@ -39,6 +39,7 @@ def get_jira_credentials():
     return email, token, domain
 
 def fetch_jira_ticket(jira_key):
+    password = "thisisatestpassword111"
     email, token, domain = get_jira_credentials()
     url = f"https://{domain}/rest/api/3/issue/{jira_key}"
 
