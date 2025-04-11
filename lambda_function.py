@@ -105,6 +105,37 @@ def build_final_prompt(template: str, context: dict) -> str:
     logger.info(f"✅ Final prompt length: {len(template)} characters")
     return template
 
+def call_claude(prompt: str, model_id="anthropic.claude-3-opus-20240229-v1:0"):
+    bedrock = boto3.client("bedrock-runtime")
+
+    payload = {
+        "anthropic_version": "bedrock-2023-05-31",
+        "max_tokens": 4000,
+        "messages": [
+            {
+                "role": "user",
+                "content": prompt
+            }
+        ]
+    }
+
+    try:
+        response = bedrock.invoke_model(
+            body=json.dumps(payload),
+            modelId=model_id,
+            contentType="application/json",
+            accept="application/json"
+        )
+
+        response_body = json.loads(response["body"].read())
+        output = response_body["content"][0]["text"]
+        logger.info(f"🧠 Claude responded with {len(output)} characters.")
+        return output
+
+    except Exception as e:
+        logger.error(f"❌ Claude invocation failed: {str(e)}", exc_info=True)
+        return "⚠️ Error running Claude model"
+
 def lambda_handler(event, context):
     start_time = time.time()  # Start execution timer
     request_id = context.aws_request_id if context else "UNKNOWN"
@@ -176,6 +207,10 @@ def lambda_handler(event, context):
         # Load prompt template for repo
         final_prompt = build_final_prompt(repo_prompt, context)
         logger.info(f"🧠 Final prompt constructed ({len(final_prompt)} characters)")
+
+        # Ask claude
+        risk_assessment = call_claude(final_prompt)
+        logger.info(f"📝 Risk Assessment Summary:\n{risk_assessment[:1000]}")
 
         execution_time = time.time() - start_time
         logger.info(f"⏱ Execution Time: {execution_time:.3f} seconds")
