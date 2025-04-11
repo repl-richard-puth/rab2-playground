@@ -76,12 +76,27 @@ def load_prompt_templates_from_s3(bucket="rab20-prompts", key="Risk Assessment B
         content = response['Body'].read().decode('utf-8-sig').splitlines()
 
         reader = csv.DictReader(content)
+        reader.fieldnames = [f.strip() for f in reader.fieldnames]  # Clean headers
+
         for row in reader:
-            repo = row['Repo'].strip()
-            prompt = row['Prompt'].strip()
-            prompt_map[repo] = prompt
+            repo_raw = row.get('Repo')
+            prompt_raw = row.get('Prompt')
+
+            if repo_raw is None or prompt_raw is None:
+                logger.warning(f"⚠️ Skipping invalid row: {row}")
+                continue
+
+            repo = repo_raw.strip()
+            prompt = prompt_raw.strip()
+
+            if repo and prompt:
+                prompt_map[repo] = prompt
+            else:
+                logger.warning(f"⚠️ Skipping row with empty fields: {row}")
+
         logger.info(f"✅ Prompt templates loaded from S3: {prompt_map}")
         return prompt_map
+
     except Exception as e:
         logger.warning(f"⚠️ Failed to load prompt templates from S3: {e}")
         return {}
@@ -98,7 +113,7 @@ def build_final_prompt(template: str, context: dict) -> str:
     }
 
     for key, value in placeholders.items():
-        value_preview = (value[:200] + '...') if len(value) > 200 else value
+        value_preview = (value[:1000] + '...') if len(value) > 1000 else value
         logger.info(f"🔄 Replacing {key} with: {value_preview}")
         template = template.replace(key, value)
 
@@ -139,7 +154,6 @@ def call_claude(prompt: str, model_id="anthropic.claude-3-opus-20240229-v1:0"):
 def post_github_comment(owner, repo, pr_number, comment_body):
     token = get_github_token()
     url = f"https://api.github.com/repos/{owner}/{repo}/issues/{pr_number}/comments"
-
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/vnd.github+json"
