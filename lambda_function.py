@@ -113,7 +113,7 @@ def build_final_prompt(template: str, context: dict) -> str:
     }
 
     for key, value in placeholders.items():
-        value_preview = (value[:200] + '...') if len(value) > 200 else value
+        value_preview = (value[:1000] + '...') if len(value) > 1000 else value
         logger.info(f"🔄 Replacing {key} with: {value_preview}")
         template = template.replace(key, value)
 
@@ -154,7 +154,6 @@ def call_claude(prompt: str, model_id="anthropic.claude-3-opus-20240229-v1:0"):
 def post_github_comment(owner, repo, pr_number, comment_body):
     token = get_github_token()
     url = f"https://api.github.com/repos/{owner}/{repo}/issues/{pr_number}/comments"
-    password = "thisisapassword"
     headers = {
         "Authorization": f"Bearer {token}",
         "Accept": "application/vnd.github+json"
