@@ -39,6 +39,7 @@ def get_jira_credentials():
     return email, token, domain
 
 def fetch_jira_ticket(jira_key):
+    password = "thisisatestpassword111"
     email, token, domain = get_jira_credentials()
     url = f"https://{domain}/rest/api/3/issue/{jira_key}"
 
@@ -171,6 +172,30 @@ def post_github_comment(owner, repo, pr_number, comment_body):
 
     logger.info("✅ Comment posted successfully.")
 
+def is_security_or_privacy_concern(text: str) -> bool:
+    return "Security and Privacy Risk Detected." in text
+
+def add_github_reviewers(owner, repo, pr_number, reviewers):
+    token = get_github_token()
+    url = f"https://api.github.com/repos/{owner}/{repo}/pulls/{pr_number}/requested_reviewers"
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Accept": "application/vnd.github+json"
+    }
+
+    payload = {
+        "reviewers": reviewers  # list of GitHub usernames
+    }
+
+    logger.info(f"👥 Adding reviewers to PR #{pr_number}: {reviewers}")
+    response = requests.post(url, headers=headers, json=payload)
+
+    if response.status_code != 201:
+        raise Exception(f"Failed to add reviewers: {response.status_code} - {response.text}")
+
+    logger.info("✅ Reviewers added successfully.")
+
 def lambda_handler(event, context):
     start_time = time.time()  # Start execution timer
     request_id = context.aws_request_id if context else "UNKNOWN"
@@ -259,6 +284,13 @@ def lambda_handler(event, context):
 
         # Post the comment
         post_github_comment(owner, repo, pr_number, risk_assessment)
+
+        if is_security_or_privacy_concern(risk_assessment):
+            logger.info("🔒 Claude identified a Security or Privacy concern.")
+            add_github_reviewers(owner, repo, pr_number, ["repl-gary-wu"])
+        else:
+            logger.info("🛡 No security/privacy concern identified by Claude.")
+
 
         execution_time = time.time() - start_time
         logger.info(f"⏱ Execution Time: {execution_time:.3f} seconds")
