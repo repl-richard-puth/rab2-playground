@@ -173,11 +173,7 @@ def post_github_comment(owner, repo, pr_number, comment_body):
     logger.info("✅ Comment posted successfully.")
 
 def is_security_or_privacy_concern(text: str) -> bool:
-    keywords = [
-        "Security and Privacy Risk Detected."
-    ]
-    text_lower = text.lower()
-    return any(kw in text_lower for kw in keywords)
+    return "Security and Privacy Risk Detected." in text
 
 def add_github_reviewers(owner, repo, pr_number, reviewers):
     token = get_github_token()
